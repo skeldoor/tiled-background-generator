@@ -15,14 +15,29 @@ function App() {
     'https://oldschool.runescape.wiki/images/Bronze_battleaxe.png',
     'https://oldschool.runescape.wiki/images/Bronze_pickaxe.png',
     'https://oldschool.runescape.wiki/images/Bronze_axe.png'
-  ])
-  const [backgroundColor, setBackgroundColor] = useState('#b8d4a0') // Sage green default
-  const [gridSize, setGridSize] = useState(7) // 7x7 grid default
-  const [sparsity, setSparsity] = useState(100) // 100% sparsity (fill all tiles)
+  ]);
+  const [backgroundColor, setBackgroundColor] = useState('#b8d4a0'); // Sage green default
+  const [gridSize, setGridSize] = useState(7); // 7x7 grid default
+
+  const handleAddImageUrl = () => {
+    setImageUrls([...imageUrls, '']);
+  };
+
+  const handleRemoveImageUrl = (index: number) => {
+    setImageUrls(imageUrls.filter((_, i) => i !== index));
+  };
+
+  const handleImageUrlChange = (index: number, value: string) => {
+    const newImageUrls = [...imageUrls];
+    newImageUrls[index] = value;
+    setImageUrls(newImageUrls);
+  };
+  const [density, setDensity] = useState(100) // 100% density (fill all tiles)
   const [scale, setScale] = useState(120) // 120px scale default
   const [spacing, setSpacing] = useState(20) // 20px spacing default
   const [embossIntensity, setEmbossIntensity] = useState(30)
-  const [embossDirection, setEmbossDirection] = useState(45)
+  const [embossDirection, setEmbossDirection] = useState(225) // Default to 225
+  const [embossDepth, setEmbossDepth] = useState(1) // New state for emboss depth
   const [rowOffset, setRowOffset] = useState(50)
   const [isRendering, setIsRendering] = useState(false)
 
@@ -39,11 +54,12 @@ function App() {
               await renderCanvas(imageUrls, {
                 backgroundColor,
                 gridSize,
-                sparsity,
+                density,
                 scale,
                 spacing,
                 embossIntensity,
                 embossDirection,
+                embossDepth, // Pass new embossDepth
                 rowOffset
               });
             } catch (error) {
@@ -55,7 +71,7 @@ function App() {
         }, 500);
       };
     })(),
-    [imageUrls, backgroundColor, gridSize, sparsity, scale, spacing, embossIntensity, embossDirection, rowOffset, renderCanvas]
+    [imageUrls, backgroundColor, gridSize, density, scale, spacing, embossIntensity, embossDirection, embossDepth, rowOffset, renderCanvas]
   );
 
   // Trigger render when settings change
@@ -77,38 +93,127 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-muted-50 p-6">
+    <div className="bg-muted-50 p-3">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-muted-900 mb-2">
+        <div className="mb-2">
+          <h1 className="text-xl font-bold text-muted-900 mb-1">
             Tiled Background Generator
           </h1>
-          <p className="text-muted-600">
+          <p className="text-muted-600 text-xs">
             Create beautiful tiled patterns from your images
           </p>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
           {/* Control Panel */}
           <div className="xl:col-span-1">
-            <div className="control-panel sticky top-6">
-              <h2 className="text-xl font-semibold text-muted-900 mb-6">
+            <div className="control-panel sticky top-3">
+              <h2 className="text-base font-semibold text-muted-900 mb-3">
                 Controls
               </h2>
 
               {/* Image Input Section */}
               <div className="control-group">
                 <label className="control-label">Image URLs</label>
-                <textarea
-                  className="control-input h-32 resize-none"
-                  placeholder="Enter image URLs (one per line)"
-                  value={imageUrls.join('\n')}
-                  onChange={(e) => setImageUrls(e.target.value.split('\n').filter(url => url.trim()))}
-                />
+                <div className="space-y-1">
+                  {imageUrls.map((url, index) => (
+                    <div key={index} className="flex items-center space-x-1">
+                      <input
+                        type="text"
+                        className="control-input flex-1 text-[10px]"
+                        placeholder="Enter image URL"
+                        value={url}
+                        onChange={(e) => handleImageUrlChange(index, e.target.value)}
+                      />
+                      <button
+                        onClick={() => handleRemoveImageUrl(index)}
+                        className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-md transition-colors text-sm"
+                        disabled={imageUrls.length === 1}
+                      >
+                        -
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={handleAddImageUrl}
+                    className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-md transition-colors text-sm w-full"
+                  >
+                    + Add Image URL
+                  </button>
+                </div>
                 <p className="text-xs text-muted-500 mt-1">
                   Add multiple image URLs for variety in your tiles
                 </p>
+              </div>
+
+              {/* Preset Image URLs */}
+              <div className="control-group">
+                <label className="control-label">Preset Image URLs</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setImageUrls([
+                      'https://oldschool.runescape.wiki/images/Bronze_thrownaxe.png',
+                      'https://oldschool.runescape.wiki/images/Bronze_battleaxe.png',
+                      'https://oldschool.runescape.wiki/images/Bronze_pickaxe.png',
+                      'https://oldschool.runescape.wiki/images/Bronze_axe.png'
+                    ])}
+                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md transition-colors text-sm"
+                  >
+                    Axes
+                  </button>
+                  <button
+                    onClick={() => setImageUrls([
+                      'https://oldschool.runescape.wiki/images/Attack_icon.png',
+                      'https://oldschool.runescape.wiki/images/Strength_icon.png',
+                      'https://oldschool.runescape.wiki/images/Defence_icon.png',
+                      'https://oldschool.runescape.wiki/images/Ranged_icon.png',
+                      'https://oldschool.runescape.wiki/images/Prayer_icon.png',
+                      'https://oldschool.runescape.wiki/images/Magic_icon.png',
+                      'https://oldschool.runescape.wiki/images/Runecraft_icon.png',
+                      'https://oldschool.runescape.wiki/images/Hitpoints_icon.png',
+                      'https://oldschool.runescape.wiki/images/Crafting_icon.png',
+                      'https://oldschool.runescape.wiki/images/Mining_icon.png',
+                      'https://oldschool.runescape.wiki/images/Smithing_icon.png',
+                      'https://oldschool.runescape.wiki/images/Fishing_icon.png',
+                      'https://oldschool.runescape.wiki/images/Cooking_icon.png',
+                      'https://oldschool.runescape.wiki/images/Firemaking_icon.png',
+                      'https://oldschool.runescape.wiki/images/Woodcutting_icon.png',
+                      'https://oldschool.runescape.wiki/images/Agility_icon.png',
+                      'https://oldschool.runescape.wiki/images/Herblore_icon.png',
+                      'https://oldschool.runescape.wiki/images/Thieving_icon.png',
+                      'https://oldschool.runescape.wiki/images/Fletching_icon.png',
+                      'https://oldschool.runescape.wiki/images/Slayer_icon.png',
+                      'https://oldschool.runescape.wiki/images/Farming_icon.png',
+                      'https://oldschool.runescape.wiki/images/Construction_icon.png',
+                      'https://oldschool.runescape.wiki/images/Hunter_icon.png'
+                    ])}
+                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md transition-colors text-sm"
+                  >
+                    Skills
+                  </button>
+                  <button
+                    onClick={() => setImageUrls([
+                      'https://oldschool.runescape.wiki/images/Scythe_of_vitur.png',
+                      'https://oldschool.runescape.wiki/images/Tumeken%27s_shadow.png',
+                      'https://oldschool.runescape.wiki/images/Twisted_bow.png'
+                    ])}
+                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md transition-colors text-sm"
+                  >
+                    Raids
+                  </button>
+                  <button
+                    onClick={() => setImageUrls([
+                      'https://oldschool.runescape.wiki/images/Archer_helm.png',
+                      'https://oldschool.runescape.wiki/images/Berserker_helm.png',
+                      'https://oldschool.runescape.wiki/images/Warrior_helm.png',
+                      'https://oldschool.runescape.wiki/images/Farseer_helm.png'
+                    ])}
+                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-md transition-colors text-sm"
+                  >
+                    Frem
+                  </button>
+                </div>
               </div>
 
               {/* Layout Controls */}
@@ -128,16 +233,19 @@ function App() {
 
               <div className="control-group">
                 <label className="control-label">
-                  Sparsity: {sparsity}%
+                  Density: {density}%
                 </label>
                 <input
                   type="range"
                   min="10"
                   max="100"
-                  value={sparsity}
-                  onChange={(e) => setSparsity(Number(e.target.value))}
+                  value={density}
+                  onChange={(e) => setDensity(Number(e.target.value))}
                   className="slider"
                 />
+                <p className="text-xs text-muted-500 mt-1">
+                  Controls how many tiles are filled (100% = fully filled, 10% = mostly empty)
+                </p>
               </div>
 
               <div className="control-group">
@@ -215,20 +323,35 @@ function App() {
                 />
               </div>
 
+              <div className="control-group">
+                <label className="control-label">
+                  Emboss Depth: {embossDepth}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  value={embossDepth}
+                  onChange={(e) => setEmbossDepth(Number(e.target.value))}
+                  className="slider"
+                />
+              </div>
+
             </div>
           </div>
 
           {/* Canvas Preview Area & Color Controls */}
-          <div className="xl:col-span-3 space-y-6">
+          <div className="xl:col-span-3 space-y-3">
             {/* Color Controls Section */}
-            <div className="bg-white rounded-lg shadow-sm border border-muted-200 p-6">
-              <h3 className="text-lg font-semibold text-muted-900 mb-4 flex items-center">
-                <Palette className="w-5 h-5 mr-2" />
+            <div className="bg-white rounded-lg shadow-sm border border-muted-200 p-3">
+              <h3 className="text-base font-semibold text-muted-900 mb-3 flex items-center">
+                <Palette className="w-4 h-4 mr-2" />
                 Color Settings
               </h3>
 
               {/* Background Color Section - Full Width */}
-              <div className="border-b border-muted-200 pb-4 mb-6">
+              <div className="border-b border-muted-200 pb-3 mb-4">
                 <label className="control-label">Background Color</label>
                 <div className="mt-3 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -294,20 +417,16 @@ function App() {
             </div>
 
             {/* Canvas Preview */}
-            <div className="bg-white rounded-lg shadow-sm border border-muted-200 p-6">
-              <div className="relative">
-                <div className="aspect-video bg-muted-100 rounded-md flex items-center justify-center overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm border border-muted-200 p-3 flex flex-col flex-grow">
+              <div className="relative flex-grow flex items-center justify-center">
+                <div className="bg-muted-100 rounded-md flex items-center justify-center overflow-hidden w-full h-full">
                   <canvas
                     ref={previewCanvasRef}
-                    className="max-w-full max-h-full object-contain"
+                    className="w-full h-full object-contain"
                     style={{
                       backgroundColor,
                       opacity: isRendering ? 0.5 : 1,
-                      transition: 'opacity 0.2s',
-                      width: '100%',
-                      height: 'auto',
-                      maxWidth: '800px',
-                      maxHeight: '450px'
+                      transition: 'opacity 0.2s'
                     }}
                   />
                   {/* Hidden canvas for export */}

@@ -54,7 +54,7 @@ A modern web application for creating beautiful tiled background patterns from i
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/tiled-background-generator.git
+git clone git@github.com:skeldoor/tiled-background-generator.git
 cd tiled-background-generator
 ```
 

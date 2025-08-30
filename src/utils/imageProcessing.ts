@@ -28,7 +28,8 @@ export const createSilhouette = (
   img: HTMLImageElement,
   tintColor: string,
   embossIntensity: number = 0,
-  embossDirection: number = 45
+  embossDirection: number = 45,
+  embossDepth: number = 1 // New parameter
 ): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
@@ -127,7 +128,7 @@ export const createSilhouette = (
 
   // Apply emboss effect if intensity > 0
   if (embossIntensity > 0 && hasVisiblePixels) {
-    applyEmbossEffect(imageData, embossIntensity / 100, embossDirection, hexToRgb(tintColor));
+    applyEmbossEffect(imageData, embossIntensity / 100, embossDirection, embossDepth, hexToRgb(tintColor));
   }
 
   // Put modified data back
@@ -143,6 +144,7 @@ const applyEmbossEffect = (
   imageData: ImageData,
   intensity: number,
   direction: number,
+  depth: number, // New parameter
   tintColor: { r: number; g: number; b: number }
 ): void => {
   const data = imageData.data;
@@ -162,24 +164,31 @@ const applyEmbossEffect = (
 
       // Only process silhouette pixels
       if (data[idx + 3] === 255) {
-        // Check if this is an edge pixel (has transparent neighbors)
-        const hasTransparentNeighbor =
-          data[((y - 1) * width + x) * 4 + 3] === 0 || // top
-          data[((y + 1) * width + x) * 4 + 3] === 0 || // bottom
-          data[(y * width + (x - 1)) * 4 + 3] === 0 || // left
-          data[(y * width + (x + 1)) * 4 + 3] === 0;   // right
+        let normalX = 0;
+        let normalY = 0;
+        let isEdge = false;
 
-        if (hasTransparentNeighbor) {
-          // Calculate surface normal based on silhouette shape
-          let normalX = 0;
-          let normalY = 0;
+        // Check neighbors within the embossDepth radius
+        for (let dy = -Math.floor(depth); dy <= Math.floor(depth); dy++) {
+          for (let dx = -Math.floor(depth); dx <= Math.floor(depth); dx++) {
+            if (dx === 0 && dy === 0) continue;
 
-          // Check each direction for silhouette presence
-          if (data[((y - 1) * width + x) * 4 + 3] === 0) normalY -= 1; // top is transparent
-          if (data[((y + 1) * width + x) * 4 + 3] === 0) normalY += 1; // bottom is transparent
-          if (data[(y * width + (x - 1)) * 4 + 3] === 0) normalX -= 1; // left is transparent
-          if (data[(y * width + (x + 1)) * 4 + 3] === 0) normalX += 1; // right is transparent
+            const nx = x + dx;
+            const ny = y + dy;
 
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              const neighborIdx = (ny * width + nx) * 4;
+              if (data[neighborIdx + 3] === 0) { // Transparent neighbor
+                isEdge = true;
+                // Accumulate normal based on direction to transparent pixel
+                normalX -= dx;
+                normalY -= dy;
+              }
+            }
+          }
+        }
+
+        if (isEdge) {
           // Normalize the normal vector
           const length = Math.sqrt(normalX * normalX + normalY * normalY);
           if (length > 0) {
@@ -191,7 +200,7 @@ const applyEmbossEffect = (
             const lightIntensity = Math.max(-1, Math.min(1, dot));
 
             // Apply emboss effect based on lighting
-            const embossFactor = lightIntensity * intensity * 0.4; // Increased intensity for visibility
+            const embossFactor = lightIntensity * intensity * 0.4; // Depth is now handled by neighbor check
 
             for (let channel = 0; channel < 3; channel++) {
               const baseColor = tintColor[channel === 0 ? 'r' : channel === 1 ? 'g' : 'b'];

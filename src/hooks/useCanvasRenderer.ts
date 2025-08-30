@@ -9,11 +9,12 @@ import {
 export interface CanvasSettings {
   backgroundColor: string;
   gridSize: number;
-  sparsity: number;
+  density: number;
   scale: number;
   spacing: number;
   embossIntensity: number;
   embossDirection: number;
+  embossDepth: number; // New property
   rowOffset: number;
 }
 
@@ -67,17 +68,21 @@ export const useCanvasRenderer = () => {
     previewCtx.fillStyle = settings.backgroundColor;
     previewCtx.fillRect(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
-    if (imageUrls.length === 0) return;
+    const validImageUrls = imageUrls.filter(url => url.trim());
 
-    // Load and process images if not already loaded
-    if (imagesRef.current.length !== imageUrls.length ||
-        imagesRef.current.some((img, index) => img.url !== imageUrls[index])) {
+    if (validImageUrls.length === 0) {
+      imagesRef.current = []; // Clear images if no valid URLs
+      return;
+    }
+
+    // Load and process images if not already loaded or if URLs have changed
+    if (imagesRef.current.length !== validImageUrls.length ||
+        imagesRef.current.some((img, index) => img.url !== validImageUrls[index])) {
 
       imagesRef.current = [];
+      const loadedImages: ProcessedImage[] = [];
 
-      for (const url of imageUrls) {
-        if (!url.trim()) continue;
-
+      for (const url of validImageUrls) {
         try {
           const img = await loadImage(url);
           const tintColor = calculateTintColor(settings.backgroundColor);
@@ -85,10 +90,11 @@ export const useCanvasRenderer = () => {
             img,
             tintColor,
             settings.embossIntensity,
-            settings.embossDirection
+            settings.embossDirection,
+            settings.embossDepth
           );
 
-          imagesRef.current.push({
+          loadedImages.push({
             img,
             url,
             silhouette
@@ -97,6 +103,8 @@ export const useCanvasRenderer = () => {
           console.warn(`Failed to load image ${url}:`, error);
         }
       }
+      imagesRef.current = loadedImages;
+      console.log(`Loaded ${imagesRef.current.length} images.`);
     }
 
     // Update silhouettes with current settings
@@ -106,7 +114,8 @@ export const useCanvasRenderer = () => {
         processedImage.img,
         tintColor,
         settings.embossIntensity,
-        settings.embossDirection
+        settings.embossDirection,
+        settings.embossDepth // Pass new embossDepth
       );
     });
 
@@ -121,8 +130,8 @@ export const useCanvasRenderer = () => {
     // Render tiles to both canvases with seamless placement
     for (let row = 0; row < settings.gridSize; row++) {
       for (let col = 0; col < settings.gridSize; col++) {
-        // Skip tile based on sparsity
-        if (Math.random() * 100 > settings.sparsity) continue;
+        // Skip tile based on density (inverted logic: higher density = fewer skips)
+        if (Math.random() * 100 > settings.density) continue;
 
         // Select random image
         const randomImage = imagesRef.current[
